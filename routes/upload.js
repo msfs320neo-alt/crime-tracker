@@ -5,7 +5,8 @@ const crypto   = require('crypto');
 const fs       = require('fs');
 const requireAuth = require('../middleware/auth');
 
-const uploadsDir = path.join(__dirname, '..', 'data', 'uploads');
+const baseDir    = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const uploadsDir = path.join(baseDir, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({

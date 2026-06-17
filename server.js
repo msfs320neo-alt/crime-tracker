@@ -6,8 +6,9 @@ const { users } = require('./db');
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-// Serve uploaded photos from persistent data dir
-app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads')));
+// Serve uploaded photos from persistent data dir (DATA_DIR on Glitch = /app/.data)
+const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
+app.use('/uploads', express.static(path.join(dataDir, 'uploads')));
 
 app.use('/api/auth',      require('./routes/auth'));
 app.use('/api/reports',   require('./routes/reports'));

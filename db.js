@@ -2,8 +2,10 @@ const Datastore = require('@seald-io/nedb');
 const path      = require('path');
 const fs        = require('fs');
 
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
+// On Glitch, .data/ is a private persistent folder that survives re-imports.
+// Locally (or Railway), DATA_DIR env var or fall back to ./data
+const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 function store(name) {
   return new Datastore({ filename: path.join(dataDir, name), autoload: true });
