@@ -1,75 +1,56 @@
-const express     = require('express');
-const { reports, users, customTypes } = require('../db');
+const express  = require('express');
+const supabase = require('../db');
 const requireAuth = require('../middleware/auth');
 
 const router = express.Router();
+router.use(requireAuth, (req, res, next) =>
+  req.user.role === 'admin' ? next() : res.status(403).json({ error: 'Admin only' })
+);
 
-// All admin routes require auth + admin role
-router.use(requireAuth, (req, res, next) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
-  next();
-});
-
-// ── Stats ──────────────────────────────────────────────────────────────────────
+// Stats
 router.get('/stats', async (req, res) => {
-  const allReports = await reports.findAsync({});
-  const allUsers   = await users.findAsync({});
-  const allTypes   = await customTypes.findAsync({});
-
-  const byType = {};
-  allReports.forEach(r => { byType[r.type] = (byType[r.type] || 0) + 1; });
-
+  const [rRes, uRes, tRes] = await Promise.all([
+    supabase.from('reports').select('type, date'),
+    supabase.from('users').select('id', { count: 'exact', head: true }),
+    supabase.from('custom_types').select('id', { count: 'exact', head: true }),
+  ]);
+  const all = rRes.data || [];
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
-  const weekCount = allReports.filter(r => new Date(r.date) >= weekAgo).length;
-
-  res.json({
-    totalReports: allReports.length,
-    totalUsers:   allUsers.length,
-    totalTypes:   allTypes.length,
-    weekCount,
-    byType,
-  });
+  const byType = {};
+  all.forEach(r => { byType[r.type] = (byType[r.type] || 0) + 1; });
+  res.json({ totalReports: all.length, totalUsers: uRes.count || 0, totalTypes: tRes.count || 0, weekCount: all.filter(r => new Date(r.date) >= weekAgo).length, byType });
 });
 
-// ── All Reports ────────────────────────────────────────────────────────────────
+// All reports
 router.get('/reports', async (req, res) => {
-  const allReports = await reports.findAsync({}).sort({ created_at: -1 });
-  const allUsers   = await users.findAsync({});
-  const byId       = Object.fromEntries(allUsers.map(u => [u._id, u.username]));
-  res.json(allReports.map(r => ({ ...r, id: r._id, reported_by: byId[r.user_id] || 'Unknown' })));
+  const { data, error } = await supabase.from('reports').select('*, users(username)').order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data.map(r => ({ ...r, reported_by: r.users?.username || 'Unknown', users: undefined })));
 });
 
-// Admin delete any report
 router.delete('/reports/:id', async (req, res) => {
-  const r = await reports.findOneAsync({ _id: req.params.id });
-  if (!r) return res.status(404).json({ error: 'Report not found' });
-  await reports.removeAsync({ _id: req.params.id }, {});
+  await supabase.from('reports').delete().eq('id', req.params.id);
   res.json({ success: true });
 });
 
-// ── Custom Types ───────────────────────────────────────────────────────────────
+// Custom types
 router.get('/types', async (req, res) => {
-  const types = await customTypes.findAsync({}).sort({ name: 1 });
-  res.json(types.map(t => ({ ...t, id: t._id })));
+  const { data } = await supabase.from('custom_types').select('*').order('name');
+  res.json(data || []);
 });
 
 router.post('/types', async (req, res) => {
   const { name, category, color, icon } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Name required' });
-  const exists = await customTypes.findOneAsync({ name: new RegExp(`^${name.trim()}$`, 'i') });
-  if (exists) return res.status(409).json({ error: 'Type already exists' });
-  const doc = await customTypes.insertAsync({
-    name:       name.trim(),
-    category:   category || 'crime',
-    color:      color    || '#22c55e',
-    icon:       icon     || '⚠️',
-    created_at: new Date().toISOString(),
-  });
-  res.status(201).json({ ...doc, id: doc._id });
+  const { data, error } = await supabase.from('custom_types')
+    .insert({ name: name.trim(), category: category || 'crime', color: color || '#22c55e', icon: icon || '⚠️' })
+    .select().single();
+  if (error) return res.status(409).json({ error: 'Type already exists or invalid.' });
+  res.status(201).json(data);
 });
 
 router.delete('/types/:id', async (req, res) => {
-  await customTypes.removeAsync({ _id: req.params.id }, {});
+  await supabase.from('custom_types').delete().eq('id', req.params.id);
   res.json({ success: true });
 });
 
