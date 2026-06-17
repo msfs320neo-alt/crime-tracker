@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neighborhood Crime Tracker</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <span class="shield-icon">🛡️</span>
+      <div>
+        <h1>Neighborhood Watch</h1>
+        <p class="subtitle">Crime Tracker &amp; Report System</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="stats-bar">
+        <div class="stat"><span id="stat-total">0</span><small>Reports</small></div>
+        <div class="stat"><span id="stat-week">0</span><small>This Week</small></div>
+        <div class="stat"><span id="stat-type">—</span><small>Top Type</small></div>
+      </div>
+      <button class="btn-noop" id="noop-btn">🔔 Alerts</button>
+      <button class="btn-admin" id="open-admin-btn" style="display:none">⚡ Admin</button>
+      <button class="btn-report" id="open-report-btn">+ Report Crime</button>
+      <div class="user-pill" id="user-pill">
+        <span class="user-avatar" id="user-avatar">?</span>
+        <span class="user-name" id="user-name">…</span>
+        <button class="btn-logout" id="logout-btn" title="Sign out">⏻</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>Recent Reports</h2>
+        <div class="filter-row">
+          <select id="filter-type" class="filter-select">
+            <option value="">All Types</option>
+          </select>
+          <button class="btn-clear-filter" id="clear-filter-btn" title="Clear filter">✕</button>
+        </div>
+      </div>
+      <ul class="report-list" id="report-list">
+        <li class="empty-state">No reports yet. Click <strong>"+ Report Crime"</strong> to add one.</li>
+      </ul>
+    </aside>
+
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="map-search" id="map-search">
+        <input type="text" id="search-input" placeholder="🔍  Search location…" autocomplete="off" />
+        <ul class="search-results" id="search-results" style="display:none"></ul>
+      </div>
+      <div class="pick-banner" id="pick-banner" style="display:none">
+        <span class="pick-banner-icon">📍</span>
+        <span id="pick-banner-text">Click anywhere on the map to place the incident pin</span>
+        <button class="pick-cancel-btn" id="pick-cancel-btn">Cancel</button>
+      </div>
+
+      <!-- Map layer toggle -->
+      <div class="map-layer-toggle">
+        <button class="mlt-btn active" data-layer="dark">🌑 Dark</button>
+        <button class="mlt-btn" data-layer="satellite">🛰️ Satellite</button>
+        <button class="mlt-btn" data-layer="street">🗺️ Street</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>📋 Report an Incident</h2>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <form id="report-form" class="report-form">
+        <div class="form-group">
+          <label>Title <span class="req">*</span></label>
+          <input type="text" id="form-title" placeholder="Brief summary of what happened…" required autocomplete="off" />
+          <div class="autodetect-badge" id="autodetect-badge" style="display:none">
+            💡 Auto-detected: <strong id="autodetect-name"></strong> — change below if wrong
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Incident Type</label>
+          <select id="form-type"></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date <span class="req">*</span></label>
+            <input type="date" id="form-date" required />
+          </div>
+          <div class="form-group">
+            <label>Time</label>
+            <input type="time" id="form-time" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="form-description" rows="3" placeholder="Additional details…"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Photos <span style="color:var(--text-muted);font-weight:400;text-transform:none">(optional, up to 10)</span></label>
+          <div class="photo-drop-zone" id="photo-drop-zone">
+            <input type="file" id="form-photos" multiple accept="image/*,image/heic" style="display:none" />
+            <span class="pdz-icon">📷</span>
+            <span class="pdz-label">Click to add photos</span>
+          </div>
+          <div class="photo-previews" id="photo-previews"></div>
+        </div>
+        <div class="form-group">
+          <label>Severity</label>
+          <div class="severity-row">
+            <label class="severity-option"><input type="radio" name="severity" value="low" /> <span class="sev-badge low">Low</span></label>
+            <label class="severity-option"><input type="radio" name="severity" value="medium" checked /> <span class="sev-badge medium">Medium</span></label>
+            <label class="severity-option"><input type="radio" name="severity" value="high" /> <span class="sev-badge high">High</span></label>
+          </div>
+        </div>
+        <div class="map-pin-preview" id="pin-preview">
+          <span>📍</span> <span id="pin-coords-text">No pin placed</span>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" id="cancel-btn">Cancel</button>
+          <button type="submit" class="btn-primary">Submit Report</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="detail-overlay">
+    <div class="modal modal-detail">
+      <div class="modal-header">
+        <h2 id="detail-title">Incident Details</h2>
+        <button class="modal-close" id="detail-close-btn">✕</button>
+      </div>
+      <div id="detail-body" class="detail-body"></div>
+      <div class="form-actions">
+        <button class="btn-danger" id="detail-delete-btn" style="display:none">Delete Report</button>
+        <button class="btn-secondary" id="detail-close-btn2">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       ADMIN PANEL
+  ══════════════════════════════════════════════════ -->
+  <div class="admin-overlay" id="admin-overlay">
+    <div class="admin-panel">
+
+      <!-- Header -->
+      <div class="admin-header">
+        <div class="admin-title">
+          <span class="admin-logo">⚡</span>
+          <span>ADMIN CONSOLE</span>
+          <span class="admin-cursor">█</span>
+          <span class="admin-badge">v1.0 · SECURE</span>
+        </div>
+        <div class="admin-header-right">
+          <span class="admin-user-tag" id="admin-user-tag">👤 admin</span>
+          <button class="admin-close-btn" id="admin-close-btn">✕</button>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="admin-body">
+
+        <!-- Nav -->
+        <nav class="admin-nav">
+          <button class="admin-nav-btn active" data-tab="dashboard">
+            <span>📊</span><span>Dashboard</span>
+          </button>
+          <button class="admin-nav-btn" data-tab="reports">
+            <span>📋</span><span>Reports</span>
+          </button>
+          <button class="admin-nav-btn" data-tab="landmarks">
+            <span>🗺️</span><span>Landmarks</span>
+          </button>
+          <button class="admin-nav-btn" data-tab="types">
+            <span>🏷️</span><span>Custom Types</span>
+          </button>
+          <button class="admin-nav-btn" data-tab="addreport">
+            <span>➕</span><span>Add Report</span>
+          </button>
+          <div class="admin-nav-spacer"></div>
+          <div class="admin-nav-status">
+            <span class="status-dot"></span>
+            <span>System Online</span>
+          </div>
+        </nav>
+
+        <!-- Content -->
+        <div class="admin-content" id="admin-content">
+
+          <!-- ── Dashboard ── -->
+          <div class="admin-tab" id="tab-dashboard">
+            <div class="admin-section-title">System Overview</div>
+            <div class="admin-stat-grid" id="admin-stats-grid">
+              <div class="admin-stat-card">
+                <div class="asc-label">Total Reports</div>
+                <div class="asc-value" id="adm-total">—</div>
+              </div>
+              <div class="admin-stat-card">
+                <div class="asc-label">This Week</div>
+                <div class="asc-value" id="adm-week">—</div>
+              </div>
+              <div class="admin-stat-card">
+                <div class="asc-label">Users</div>
+                <div class="asc-value" id="adm-users">—</div>
+              </div>
+              <div class="admin-stat-card">
+                <div class="asc-label">Custom Types</div>
+                <div class="asc-value" id="adm-types">—</div>
+              </div>
+            </div>
+            <div class="admin-section-title" style="margin-top:24px">Crime Breakdown</div>
+            <div class="admin-breakdown" id="admin-breakdown"></div>
+          </div>
+
+          <!-- ── All Reports ── -->
+          <div class="admin-tab" id="tab-reports" style="display:none">
+            <div class="admin-section-title">All Reports <span class="admin-count" id="reports-count"></span></div>
+            <table class="admin-table" id="admin-reports-table">
+              <thead>
+                <tr>
+                  <th>Type</th><th>Category</th><th>Date</th><th>Reported By</th><th>Sev.</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="admin-reports-body"></tbody>
+            </table>
+          </div>
+
+          <!-- ── Landmarks ── -->
+          <div class="admin-tab" id="tab-landmarks" style="display:none">
+            <div class="admin-two-col">
+              <div class="admin-col">
+                <div class="admin-section-title">Add Landmark</div>
+                <form class="admin-form" id="landmark-form">
+                  <div class="admin-field">
+                    <label>Name</label>
+                    <input type="text" id="lm-name" placeholder="e.g. Riverside Park" required />
+                  </div>
+                  <div class="admin-field">
+                    <label>Type</label>
+                    <select id="lm-type">
+                      <option value="Park">🌳 Park</option>
+                      <option value="Lake">💧 Lake / River</option>
+                      <option value="School">🏫 School</option>
+                      <option value="Hospital">🏥 Hospital</option>
+                      <option value="Police">🚔 Police Station</option>
+                      <option value="Fire Station">🚒 Fire Station</option>
+                      <option value="Library">📚 Library</option>
+                      <option value="Sports">⚽ Sports Venue</option>
+                      <option value="Transit">🚌 Transit Stop</option>
+                      <option value="Church">⛪ Church</option>
+                      <option value="Shopping">🛒 Shopping</option>
+                      <option value="Custom">📌 Custom</option>
+                    </select>
+                  </div>
+                  <div class="admin-field">
+                    <label>Description (optional)</label>
+                    <input type="text" id="lm-desc" placeholder="Short description" />
+                  </div>
+                  <div class="admin-field-row">
+                    <div class="admin-field">
+                      <label>Latitude</label>
+                      <input type="number" id="lm-lat" step="any" placeholder="40.71280" required />
+                    </div>
+                    <div class="admin-field">
+                      <label>Longitude</label>
+                      <input type="number" id="lm-lng" step="any" placeholder="-74.00600" required />
+                    </div>
+                  </div>
+                  <button type="button" class="admin-pick-btn" id="lm-pick-btn">📍 Pick on Map</button>
+                  <button type="submit" class="admin-submit-btn">Add Landmark</button>
+                </form>
+              </div>
+              <div class="admin-col">
+                <div class="admin-section-title">Placed Landmarks <span class="admin-count" id="landmarks-count"></span></div>
+                <ul class="admin-list" id="landmarks-list"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Custom Types ── -->
+          <div class="admin-tab" id="tab-types" style="display:none">
+            <div class="admin-two-col">
+              <div class="admin-col">
+                <div class="admin-section-title">Add Custom Type</div>
+                <form class="admin-form" id="type-form">
+                  <div class="admin-field">
+                    <label>Type Name</label>
+                    <input type="text" id="ct-name" placeholder="e.g. Graffiti, Coyote Sighting" required />
+                  </div>
+                  <div class="admin-field">
+                    <label>Category</label>
+                    <select id="ct-category">
+                      <option value="crime">🔴 Crime</option>
+                      <option value="traffic">🚦 Traffic</option>
+                      <option value="environmental">🌿 Environmental</option>
+                      <option value="infrastructure">🏗️ Infrastructure</option>
+                      <option value="animal">🐾 Animal / Wildlife</option>
+                      <option value="emergency">🚨 Emergency</option>
+                      <option value="missing">🔍 Missing Person</option>
+                      <option value="noise">🔊 Noise</option>
+                      <option value="community">🟢 Community</option>
+                      <option value="event">🎉 Event</option>
+                      <option value="lost-found">📦 Lost &amp; Found</option>
+                      <option value="public-health">🏥 Public Health</option>
+                    </select>
+                  </div>
+                  <div class="admin-field">
+                    <label>Icon (emoji)</label>
+                    <input type="text" id="ct-icon" placeholder="⚠️" maxlength="4" />
+                  </div>
+                  <div class="admin-field">
+                    <label>Color</label>
+                    <div class="color-swatch-row" id="color-swatches">
+                      <button type="button" class="cswatch active" data-color="#22c55e" style="background:#22c55e"></button>
+                      <button type="button" class="cswatch" data-color="#f0a030" style="background:#f0a030"></button>
+                      <button type="button" class="cswatch" data-color="#e05252" style="background:#e05252"></button>
+                      <button type="button" class="cswatch" data-color="#4fa8d0" style="background:#4fa8d0"></button>
+                      <button type="button" class="cswatch" data-color="#a064f0" style="background:#a064f0"></button>
+                      <button type="button" class="cswatch" data-color="#f07830" style="background:#f07830"></button>
+                      <button type="button" class="cswatch" data-color="#d064a0" style="background:#d064a0"></button>
+                      <button type="button" class="cswatch" data-color="#7b82a8" style="background:#7b82a8"></button>
+                    </div>
+                    <input type="hidden" id="ct-color" value="#22c55e" />
+                  </div>
+                  <button type="submit" class="admin-submit-btn">Add Type</button>
+                </form>
+              </div>
+              <div class="admin-col">
+                <div class="admin-section-title">Custom Types <span class="admin-count" id="types-count"></span></div>
+                <ul class="admin-list" id="types-list"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Add Report (admin) ── -->
+          <div class="admin-tab" id="tab-addreport" style="display:none">
+            <div class="admin-section-title">Create Report</div>
+            <form class="admin-form admin-form-wide" id="admin-report-form">
+              <div class="admin-field">
+                <label>Title</label>
+                <input type="text" id="ar-title" placeholder="Brief summary…" required autocomplete="off" />
+              </div>
+              <div class="admin-field-row">
+                <div class="admin-field">
+                  <label>Category</label>
+                  <select id="ar-category">
+                    <option value="crime">🔴 Crime</option>
+                    <option value="traffic">🚦 Traffic</option>
+                    <option value="environmental">🌿 Environmental</option>
+                    <option value="infrastructure">🏗️ Infrastructure</option>
+                    <option value="animal">🐾 Animal / Wildlife</option>
+                    <option value="emergency">🚨 Emergency</option>
+                    <option value="missing">🔍 Missing Person</option>
+                    <option value="noise">🔊 Noise</option>
+                    <option value="community">🟢 Community</option>
+                    <option value="event">🎉 Event</option>
+                    <option value="lost-found">📦 Lost &amp; Found</option>
+                    <option value="public-health">🏥 Public Health</option>
+                  </select>
+                </div>
+                <div class="admin-field">
+                  <label>Type</label>
+                  <select id="ar-type" required></select>
+                </div>
+              </div>
+              <div class="admin-field-row">
+                <div class="admin-field">
+                  <label>Date</label>
+                  <input type="date" id="ar-date" required />
+                </div>
+                <div class="admin-field">
+                  <label>Time</label>
+                  <input type="time" id="ar-time" />
+                </div>
+              </div>
+              <div class="admin-field">
+                <label>Description</label>
+                <textarea id="ar-description" rows="3" placeholder="Details…"></textarea>
+              </div>
+              <div class="admin-field">
+                <label>Severity</label>
+                <div class="severity-row">
+                  <label class="severity-option"><input type="radio" name="ar-severity" value="low" /> <span class="sev-badge low">Low</span></label>
+                  <label class="severity-option"><input type="radio" name="ar-severity" value="medium" checked /> <span class="sev-badge medium">Medium</span></label>
+                  <label class="severity-option"><input type="radio" name="ar-severity" value="high" /> <span class="sev-badge high">High</span></label>
+                </div>
+              </div>
+              <div class="admin-field-row">
+                <div class="admin-field">
+                  <label>Latitude</label>
+                  <input type="number" id="ar-lat" step="any" placeholder="40.71280" />
+                </div>
+                <div class="admin-field">
+                  <label>Longitude</label>
+                  <input type="number" id="ar-lng" step="any" placeholder="-74.00600" />
+                </div>
+              </div>
+              <button type="button" class="admin-pick-btn" id="ar-pick-btn">📍 Pick on Map</button>
+              <button type="submit" class="admin-submit-btn">Submit Report</button>
+            </form>
+          </div>
+
+        </div><!-- /admin-content -->
+      </div><!-- /admin-body -->
+    </div><!-- /admin-panel -->
+  </div><!-- /admin-overlay -->
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — Neighborhood Watch</title>
+  <link rel="stylesheet" href="login.css" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <div class="card-wrap">
+    <div class="brand">
+      <span class="brand-icon">🛡️</span>
+      <div>
+        <h1>Neighborhood Watch</h1>
+        <p>Crime Tracker &amp; Report System</p>
+      </div>
+    </div>
+
+    <!-- Tab toggle -->
+    <div class="tabs">
+      <button class="tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+      <button class="tab" id="tab-register" onclick="switchTab('register')">Create Account</button>
+    </div>
+
+    <!-- Error banner -->
+    <div class="error-banner" id="error-banner" style="display:none"></div>
+
+    <!-- LOGIN FORM -->
+    <form id="login-form" class="auth-form" onsubmit="submitLogin(event)">
+      <div class="field">
+        <label>Username or Email</label>
+        <input type="text" id="login-email" placeholder="admin  or  you@example.com" required autocomplete="username" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="login-password" placeholder="Your password" required autocomplete="current-password" />
+          <button type="button" class="pw-toggle" onclick="togglePw('login-password', this)">👁</button>
+        </div>
+      </div>
+      <button type="submit" class="btn-submit" id="login-submit">
+        <span class="btn-text">Sign In</span>
+        <span class="btn-spinner" style="display:none">⏳</span>
+      </button>
+      <p class="switch-hint">Don't have an account? <a href="#" onclick="switchTab('register');return false">Create one</a></p>
+    </form>
+
+    <!-- REGISTER FORM -->
+    <form id="register-form" class="auth-form" style="display:none" onsubmit="submitRegister(event)">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="reg-username" placeholder="Your name or handle" required autocomplete="username" />
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="you@example.com" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label>Password <span class="hint-inline">(min 6 characters)</span></label>
+        <div class="pw-wrap">
+          <input type="password" id="reg-password" placeholder="Choose a password" required autocomplete="new-password" />
+          <button type="button" class="pw-toggle" onclick="togglePw('reg-password', this)">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Confirm Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="reg-confirm" placeholder="Repeat password" required autocomplete="new-password" />
+          <button type="button" class="pw-toggle" onclick="togglePw('reg-confirm', this)">👁</button>
+        </div>
+      </div>
+      <button type="submit" class="btn-submit" id="reg-submit">
+        <span class="btn-text">Create Account</span>
+        <span class="btn-spinner" style="display:none">⏳</span>
+      </button>
+      <p class="switch-hint">Already have an account? <a href="#" onclick="switchTab('login');return false">Sign in</a></p>
+    </form>
+
+  </div>
+
+  <script>
+    // If already logged in, go straight to the app
+    if (localStorage.getItem('nw_token')) {
+      window.location.href = '/';
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+      document.getElementById('login-form').style.display    = tab === 'login'    ? '' : 'none';
+      document.getElementById('register-form').style.display = tab === 'register' ? '' : 'none';
+      hideError();
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-banner');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function hideError() {
+      document.getElementById('error-banner').style.display = 'none';
+    }
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      btn.querySelector('.btn-text').style.display   = loading ? 'none' : '';
+      btn.querySelector('.btn-spinner').style.display = loading ? '' : 'none';
+      btn.disabled = loading;
+    }
+
+    function togglePw(id, btn) {
+      const el = document.getElementById(id);
+      el.type = el.type === 'password' ? 'text' : 'password';
+      btn.textContent = el.type === 'password' ? '👁' : '🙈';
+    }
+
+    async function apiPost(url, body) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Something went wrong');
+      return data;
+    }
+
+    async function submitLogin(e) {
+      e.preventDefault();
+      hideError();
+      setLoading('login-submit', true);
+      try {
+        const data = await apiPost('/api/auth/login', {
+          email:    document.getElementById('login-email').value,
+          password: document.getElementById('login-password').value,
+        });
+        localStorage.setItem('nw_token', data.token);
+        localStorage.setItem('nw_user',  JSON.stringify(data.user));
+        window.location.href = '/';
+      } catch (err) {
+        showError(err.message);
+        setLoading('login-submit', false);
+      }
+    }
+
+    async function submitRegister(e) {
+      e.preventDefault();
+      hideError();
+      const pw  = document.getElementById('reg-password').value;
+      const pw2 = document.getElementById('reg-confirm').value;
+      if (pw !== pw2) { showError('Passwords do not match.'); return; }
+      setLoading('reg-submit', true);
+      try {
+        const data = await apiPost('/api/auth/register', {
+          username: document.getElementById('reg-username').value,
+          email:    document.getElementById('reg-email').value,
+          password: pw,
+        });
+        localStorage.setItem('nw_token', data.token);
+        localStorage.setItem('nw_user',  JSON.stringify(data.user));
+        window.location.href = '/';
+      } catch (err) {
+        showError(err.message);
+        setLoading('reg-submit', false);
+      }
+    }
+  </script>
+</body>
+</html>
