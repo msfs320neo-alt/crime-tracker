@@ -6,142 +6,54 @@ if (!token || !me) { window.location.href = '/login.html'; throw new Error('unau
 // ── Built-in types ─────────────────────────────────────────────────────────────
 
 const BUILTIN_CRIME = [
-  // violent
-  { name:'Shooting / Gunshots',       color:'#dc2626', icon:'🔴', category:'crime' },
-  { name:'Assault',                   color:'#c94040', icon:'⚡', category:'crime' },
-  { name:'Robbery',                   color:'#e03030', icon:'🔫', category:'crime' },
-  { name:'Carjacking',                color:'#b91c1c', icon:'🚨', category:'crime' },
-  { name:'Domestic Disturbance',      color:'#7c3aed', icon:'🏚️', category:'crime' },
-  { name:'Stalking',                  color:'#6366f1', icon:'🕵️', category:'crime' },
-  { name:'Harassment',                color:'#0284c7', icon:'😠', category:'crime' },
-  // property
-  { name:'Burglary',                  color:'#e05252', icon:'🏠', category:'crime' },
-  { name:'Theft',                     color:'#f0a030', icon:'🏃', category:'crime' },
-  { name:'Shoplifting',               color:'#ca8a04', icon:'🛍️', category:'crime' },
-  { name:'Vehicle Break-in',          color:'#f07830', icon:'🚗', category:'crime' },
-  { name:'Bike Theft',                color:'#fb923c', icon:'🚲', category:'crime' },
-  { name:'Package Theft',             color:'#f59e0b', icon:'📦', category:'crime' },
-  { name:'Catalytic Converter Theft', color:'#d97706', icon:'🔧', category:'crime' },
-  { name:'Identity Theft / Fraud',    color:'#059669', icon:'🪪', category:'crime' },
-  { name:'Scam',                      color:'#10b981', icon:'💳', category:'crime' },
-  // damage / nuisance
-  { name:'Vandalism',                 color:'#a064f0', icon:'🔨', category:'crime' },
-  { name:'Graffiti',                  color:'#9333ea', icon:'🎨', category:'crime' },
-  { name:'Arson',                     color:'#ef4444', icon:'🔥', category:'crime' },
-  { name:'Illegal Dumping',           color:'#65a30d', icon:'🗑️', category:'crime' },
-  { name:'Trespassing',               color:'#0891b2', icon:'🚫', category:'crime' },
-  { name:'Hit and Run',               color:'#f97316', icon:'💥', category:'crime' },
-  // substances / disorder
-  { name:'Drug Activity',             color:'#d064a0', icon:'💊', category:'crime' },
-  { name:'Public Intoxication',       color:'#db2777', icon:'🍺', category:'crime' },
-  { name:'Noise Complaint',           color:'#8b5cf6', icon:'🔊', category:'crime' },
-  // general
-  { name:'Suspicious Activity',       color:'#4fa8d0', icon:'👁️', category:'crime' },
-  { name:'Other',                     color:'#7b82a8', icon:'⚠️', category:'crime' },
+  { name:'Shooting / Gunshots', color:'#dc2626', icon:'🔴', category:'crime' },
+  { name:'Assault',             color:'#c94040', icon:'⚡', category:'crime' },
+  { name:'Robbery',             color:'#e03030', icon:'🔫', category:'crime' },
+  { name:'Burglary',            color:'#e05252', icon:'🏠', category:'crime' },
+  { name:'Theft',               color:'#f0a030', icon:'🏃', category:'crime' },
+  { name:'Vehicle Break-in',    color:'#f07830', icon:'🚗', category:'crime' },
+  { name:'Vandalism',           color:'#a064f0', icon:'🔨', category:'crime' },
+  { name:'Drug Activity',       color:'#d064a0', icon:'💊', category:'crime' },
+  { name:'Suspicious Activity', color:'#4fa8d0', icon:'👁️', category:'crime' },
+  { name:'Other',               color:'#7b82a8', icon:'⚠️', category:'crime' },
+];
+
+const BUILTIN_COMMUNITY = [
+  { name:'Car Accident',       color:'#f59e0b', icon:'💥', category:'traffic' },
+  { name:'Hit and Run',        color:'#f97316', icon:'🚨', category:'traffic' },
+  { name:'Road Closure',       color:'#d97706', icon:'🚧', category:'traffic' },
+  { name:'Flooding',           color:'#3b82f6', icon:'🌊', category:'environmental' },
+  { name:'Downed Tree',        color:'#22c55e', icon:'🌳', category:'environmental' },
+  { name:'Illegal Dumping',    color:'#65a30d', icon:'🗑️', category:'environmental' },
+  { name:'Stray Dog',          color:'#84cc16', icon:'🐕', category:'animal' },
+  { name:'Wildlife Sighting',  color:'#22c55e', icon:'🦌', category:'animal' },
+  { name:'Fire',               color:'#dc2626', icon:'🔥', category:'emergency' },
+  { name:'Medical Emergency',  color:'#ef4444', icon:'🚑', category:'emergency' },
+  { name:'Gas Leak',           color:'#f97316', icon:'💨', category:'emergency' },
+  { name:'Missing Person',     color:'#a855f7', icon:'🔍', category:'missing' },
+  { name:'Missing Pet',        color:'#c084fc', icon:'🐾', category:'missing' },
+  { name:'Noise Complaint',    color:'#8b5cf6', icon:'🔊', category:'noise' },
+  { name:'Community Notice',   color:'#ff3300', icon:'📢', category:'community' },
+  { name:'Safety Advisory',    color:'#3b82f6', icon:'🔔', category:'community' },
+  { name:'Lost Item',          color:'#06b6d4', icon:'❓', category:'lost-found' },
+  { name:'Found Item',         color:'#06b6d4', icon:'📦', category:'lost-found' },
 ];
 
 // ── Keyword → type guesser ─────────────────────────────────────────────────────
 
 const TYPE_KEYWORDS = {
-  'Shooting / Gunshots':       ['shoot','shot','gun','gunshot','firearm','bullet','fired','shots fired','bang'],
-  'Assault':                   ['attack','attacked','hit','punch','punched','beat','beaten','fight','assault','stabbed','stab','knife'],
-  'Robbery':                   ['rob','robbery','mugged','mugger','demanded','held up','armed rob'],
-  'Carjacking':                ['carjack','carjacking','stole car','took car','car stolen at gunpoint'],
-  'Domestic Disturbance':      ['domestic','screaming inside','fighting inside','yelling inside','couple fighting'],
-  'Stalking':                  ['stalking','stalk','been following','following me','watching my'],
-  'Harassment':                ['harass','harassment','threatening me','threats','bother','following and'],
-  'Burglary':                  ['broke in','break in','break-in','burglar','burglary','forced entry','broken into','entered my home'],
-  'Theft':                     ['stole','stolen','theft','pickpocket','took my','my wallet','my phone taken'],
-  'Shoplifting':               ['shoplifting','shoplift','stole from store','store theft','stole merchandise'],
-  'Vehicle Break-in':          ['car window','broke into car','smashed window','vehicle break','car door'],
-  'Bike Theft':                ['bike','bicycle','e-bike','ebike','my bike','cycling'],
-  'Package Theft':             ['package','porch pirate','delivery','parcel','ups','fedex','amazon','stole package'],
-  'Catalytic Converter Theft': ['catalytic','converter','under my car','under the car','exhaust stolen'],
-  'Identity Theft / Fraud':    ['identity theft','id theft','personal info stolen','credit card stolen','bank account'],
-  'Scam':                      ['scam','scammer','fraud','con man','fake','phishing','swindle','tricked'],
-  'Vandalism':                 ['vandal','vandalism','damage','damaged','smashed','destroyed','keyed','broke my','scratched'],
-  'Graffiti':                  ['graffiti','spray paint','tagged','tagging','spray-painted','wrote on'],
-  'Arson':                     ['fire','arson','set fire','burning','burned','flames','ignite','lit on fire'],
-  'Illegal Dumping':           ['dump','dumping','trash','garbage','waste','junk','debris left','mattress'],
-  'Trespassing':               ['trespass','trespassing','private property','on my property','no trespassing','uninvited'],
-  'Hit and Run':               ['hit and run','hit-and-run','fled the scene','crashed and fled','drove away after'],
-  'Drug Activity':             ['drug','drugs','dealer','dealing','selling drugs','needle','narcotic','meth','crack','heroin','pills','buying drugs'],
-  'Public Intoxication':       ['drunk','intoxicated','intoxication','alcohol','drinking in public','passed out'],
-  'Noise Complaint':           ['noise','loud','party','loud music','shouting outside','banging'],
-  'Suspicious Activity':       ['suspicious','lurking','weird person','strange person','unusual','acting strange','casing'],
-  // non-crime
-  'Car Accident':              ['accident','collision','crash','rear-ended','fender bender','smash','car crash'],
-  'Road Closure':              ['road closed','road closure','blocked road','street closed'],
-  'Pothole':                   ['pothole','pot hole','hole in road','road damage'],
-  'Broken Streetlight':        ['streetlight','street light','light out','lamp out','dark street'],
-  'Flooding':                  ['flood','flooding','flooded','water on road','standing water'],
-  'Downed Tree':               ['tree down','fallen tree','downed tree','tree fell','branch down'],
-  'Stray Dog':                 ['stray dog','loose dog','dog running','aggressive dog'],
-  'Wildlife Sighting':         ['coyote','bear','fox','raccoon','wildlife','animal sighting','snake'],
-  'Missing Person':            ['missing person','missing child','missing adult','can\'t find','gone missing'],
-  'Missing Pet':               ['missing cat','missing dog','lost pet','my cat','my dog is missing'],
-  'Fire':                      ['fire','house fire','building fire','car fire','smoke','flames'],
-  'Gas Leak':                  ['gas leak','smell gas','gas smell','gas line'],
-  'Medical Emergency':         ['medical','heart attack','unconscious','seizure','ambulance needed','not breathing'],
-  'Pest Infestation':          ['rats','mice','cockroach','bed bugs','infestation','rodent'],
+  'Shooting / Gunshots': ['shoot','shot','gun','gunshot','fired','shots fired','bang','bullet'],
+  'Assault':             ['attack','attacked','punch','punched','beat','beaten','fight','assault','stabbed','stab','knife'],
+  'Robbery':             ['rob','robbery','mugged','mugger','demanded','held up'],
+  'Burglary':            ['broke in','break in','burglar','burglary','forced entry','broken into'],
+  'Theft':               ['stole','stolen','theft','pickpocket','took my','my wallet','my phone'],
+  'Vehicle Break-in':    ['car window','broke into car','smashed window','vehicle break'],
+  'Vandalism':           ['vandal','vandalism','damaged','smashed','destroyed','keyed','scratched','graffiti','spray paint'],
+  'Drug Activity':       ['drug','drugs','dealer','dealing','needle','narcotic','meth','crack'],
+  'Suspicious Activity': ['suspicious','lurking','weird person','strange','acting strange','casing'],
 };
 
-const BUILTIN_COMMUNITY = [
-  // traffic
-  { name:'Car Accident',          color:'#f59e0b', icon:'💥', category:'traffic' },
-  { name:'Road Closure',          color:'#f59e0b', icon:'🚧', category:'traffic' },
-  { name:'Traffic Jam',           color:'#d97706', icon:'🚦', category:'traffic' },
-  { name:'Hit and Run',           color:'#f97316', icon:'🚨', category:'traffic' },
-  { name:'Reckless Driving',      color:'#fb923c', icon:'🏎️', category:'traffic' },
-  // environmental
-  { name:'Flooding',              color:'#3b82f6', icon:'🌊', category:'environmental' },
-  { name:'Downed Tree',           color:'#22c55e', icon:'🌳', category:'environmental' },
-  { name:'Illegal Dumping',       color:'#65a30d', icon:'🗑️', category:'environmental' },
-  { name:'Pollution',             color:'#84cc16', icon:'☣️', category:'environmental' },
-  { name:'Fallen Power Line',     color:'#facc15', icon:'⚡', category:'environmental' },
-  // infrastructure
-  { name:'Pothole',               color:'#6366f1', icon:'🕳️', category:'infrastructure' },
-  { name:'Broken Streetlight',    color:'#6366f1', icon:'💡', category:'infrastructure' },
-  { name:'Water Main Break',      color:'#6366f1', icon:'💧', category:'infrastructure' },
-  { name:'Power Outage',          color:'#6366f1', icon:'🔌', category:'infrastructure' },
-  { name:'Damaged Sidewalk',      color:'#818cf8', icon:'🚶', category:'infrastructure' },
-  // animal / wildlife
-  { name:'Stray Dog',             color:'#84cc16', icon:'🐕', category:'animal' },
-  { name:'Stray Cat',             color:'#84cc16', icon:'🐈', category:'animal' },
-  { name:'Wildlife Sighting',     color:'#22c55e', icon:'🦌', category:'animal' },
-  { name:'Animal Injury',         color:'#84cc16', icon:'🐾', category:'animal' },
-  { name:'Swarm / Bees',          color:'#fbbf24', icon:'🐝', category:'animal' },
-  // emergency
-  { name:'Fire',                  color:'#dc2626', icon:'🔥', category:'emergency' },
-  { name:'Medical Emergency',     color:'#ef4444', icon:'🚑', category:'emergency' },
-  { name:'Gas Leak',              color:'#f97316', icon:'💨', category:'emergency' },
-  { name:'Hazmat',                color:'#dc2626', icon:'☢️', category:'emergency' },
-  // missing
-  { name:'Missing Person',        color:'#a855f7', icon:'🔍', category:'missing' },
-  { name:'Missing Pet',           color:'#c084fc', icon:'🐾', category:'missing' },
-  { name:'Welfare Check',         color:'#a855f7', icon:'👤', category:'missing' },
-  // noise
-  { name:'Noise Complaint',       color:'#8b5cf6', icon:'🔊', category:'noise' },
-  { name:'Construction Noise',    color:'#8b5cf6', icon:'🔨', category:'noise' },
-  { name:'Loud Music / Party',    color:'#7c3aed', icon:'🎵', category:'noise' },
-  // community
-  { name:'Community Notice',      color:'#22c55e', icon:'📢', category:'community' },
-  { name:'Safety Advisory',       color:'#3b82f6', icon:'🔔', category:'community' },
-  { name:'Neighborhood Watch',    color:'#22c55e', icon:'👀', category:'community' },
-  // event
-  { name:'Community Event',       color:'#a855f7', icon:'🎉', category:'event' },
-  { name:'Block Party',           color:'#a855f7', icon:'🎊', category:'event' },
-  { name:'Garage Sale',           color:'#c084fc', icon:'🏷️', category:'event' },
-  // lost & found
-  { name:'Lost Item',             color:'#06b6d4', icon:'❓', category:'lost-found' },
-  { name:'Found Item',            color:'#06b6d4', icon:'📦', category:'lost-found' },
-  { name:'Lost Pet',              color:'#0891b2', icon:'🐾', category:'lost-found' },
-  { name:'Found Pet',             color:'#0891b2', icon:'🐶', category:'lost-found' },
-  // public health
-  { name:'Public Health Concern', color:'#3b82f6', icon:'🏥', category:'public-health' },
-  { name:'Pest Infestation',      color:'#3b82f6', icon:'🐀', category:'public-health' },
-  { name:'Contamination Risk',    color:'#0ea5e9', icon:'⚠️', category:'public-health' },
-];
+const EMOJI_LIST = ['🔫','⚡','🏠','🚗','💊','👁️','🏃','🔨','🚨','🔴','💥','🔥','💣','😠','🕵️','🚫','💳','🪪','🌊','🌳','🗑️','🐕','🦌','🐈','🐾','🐝','🚑','💨','☢️','📢','🔔','🔍','📦','🎉','🔊','⚠️','❓','📌','📍','⭐','🏥','🚌','💡','💧','🚧','🎯','❗','🔺','👀','🚒','🚔','🐀','🌿','🏚️'];
 
 const LANDMARK_META = {
   'Park':         { icon:'🌳', color:'#22c55e' },
@@ -200,6 +112,24 @@ function logout() {
   window.location.href = '/login.html';
 }
 document.getElementById('logout-btn').addEventListener('click', logout);
+
+// Mobile nav
+if (me.role === 'admin') {
+  const mobAdmin = document.getElementById('mob-admin-btn');
+  if (mobAdmin) mobAdmin.style.display = '';
+}
+document.getElementById('mob-map-btn')?.addEventListener('click', () => {
+  document.getElementById('sidebar')?.classList.remove('open');
+});
+document.getElementById('mob-reports-btn')?.addEventListener('click', () => {
+  document.getElementById('sidebar')?.classList.toggle('open');
+});
+document.getElementById('mob-report-btn')?.addEventListener('click', () => enterPickMode());
+document.getElementById('mob-admin-btn')?.addEventListener('click', () => openAdminPanel());
+document.getElementById('mob-search-btn')?.addEventListener('click', () => {
+  const input = document.getElementById('search-input');
+  if (input) { input.focus(); input.scrollIntoView(); }
+});
 
 // ── Map ────────────────────────────────────────────────────────────────────────
 
@@ -452,7 +382,7 @@ function setPendingPin(lat, lng) {
   pendingPin = { lat, lng };
   if (pendingMarker) map.removeLayer(pendingMarker);
   pendingMarker = L.circleMarker([lat, lng], {
-    radius:10, color:'#22c55e', fillColor:'#22c55e', fillOpacity:.4, weight:2,
+    radius:10, color:'#ff3300', fillColor:'#ff3300', fillOpacity:.4, weight:2,
   }).addTo(map);
   document.getElementById('pin-coords-text').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
@@ -761,7 +691,7 @@ function switchAdminTab(name) {
 
   if (name === 'reports')   adminLoadReports();
   if (name === 'landmarks') adminLoadLandmarks();
-  if (name === 'types')     adminLoadTypes();
+  if (name === 'types')     { adminLoadTypes(); initEmojiPicker(); }
   if (name === 'addreport') adminInitAddReport();
 }
 
@@ -790,7 +720,7 @@ async function adminLoadStats() {
           <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:${Math.round(count/max*100)}%;background:${info.color}"></div></div>
           <div class="breakdown-count">${count}</div>
         </div>`;
-      }).join('') || '<div style="color:rgba(34,197,94,.3);font-size:12px;padding:8px 0">No reports yet.</div>';
+      }).join('') || '<div style="color:rgba(255,51,0,.3);font-size:12px;padding:8px 0">No reports yet.</div>';
   } catch {}
 }
 
@@ -811,7 +741,7 @@ async function adminLoadReports() {
         <td><span class="sev-badge ${sev}" style="padding:2px 8px;font-size:10px">${capitalize(sev)}</span></td>
         <td><button class="tbl-delete-btn" data-id="${r.id}">Delete</button></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="6" style="text-align:center;color:rgba(34,197,94,.3);padding:20px">No reports</td></tr>';
+    }).join('') || '<tr><td colspan="6" style="text-align:center;color:rgba(255,51,0,.3);padding:20px">No reports</td></tr>';
 
     document.querySelectorAll('.tbl-delete-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -899,6 +829,36 @@ document.getElementById('lm-pick-btn').addEventListener('click', () => {
   enterPickMode('Click the map to place the landmark pin');
 });
 
+// ── Admin: Emoji Picker ────────────────────────────────────────────────────────
+
+function initEmojiPicker() {
+  const grid = document.getElementById('emoji-grid');
+  if (!grid || grid.dataset.init) return;
+  grid.dataset.init = '1';
+  grid.innerHTML = EMOJI_LIST.map(e => `<button type="button" class="emoji-opt" data-emoji="${e}">${e}</button>`).join('');
+  grid.querySelectorAll('.emoji-opt').forEach(btn => {
+    btn.addEventListener('click', () => selectEmoji(btn.dataset.emoji));
+  });
+  const customInput = document.getElementById('emoji-custom-input');
+  if (customInput) customInput.addEventListener('input', e => {
+    if (e.target.value.trim()) selectEmoji(e.target.value.trim());
+  });
+  const toggleBtn = document.getElementById('emoji-toggle-btn');
+  if (toggleBtn) toggleBtn.addEventListener('click', () => {
+    const panel = document.getElementById('emoji-picker-panel');
+    if (panel) panel.style.display = panel.style.display === 'none' ? '' : 'none';
+  });
+}
+
+function selectEmoji(emoji) {
+  const iconInput = document.getElementById('ct-icon');
+  const preview = document.getElementById('emoji-preview-display');
+  if (iconInput) iconInput.value = emoji;
+  if (preview) preview.textContent = emoji;
+  const panel = document.getElementById('emoji-picker-panel');
+  if (panel) panel.style.display = 'none';
+}
+
 // ── Admin: Custom Types ────────────────────────────────────────────────────────
 
 async function adminLoadTypes() {
@@ -962,6 +922,9 @@ document.getElementById('type-form').addEventListener('submit', async e => {
       document.querySelectorAll('.cswatch').forEach(b => b.classList.remove('active'));
       document.querySelector('.cswatch[data-color="#22c55e"]').classList.add('active');
       document.getElementById('ct-color').value = '#22c55e';
+      // reset emoji picker
+      document.getElementById('emoji-preview-display').textContent = '⚠️';
+      document.getElementById('ct-icon').value = '⚠️';
     }
   } catch(err) { alert(err.message); }
   finally { btn.textContent = 'Add Type'; btn.disabled = false; }

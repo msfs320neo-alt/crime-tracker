@@ -12,10 +12,12 @@
   <!-- Header -->
   <header class="header">
     <div class="header-left">
-      <span class="shield-icon">🛡️</span>
-      <div>
-        <h1>Neighborhood Watch</h1>
-        <p class="subtitle">Crime Tracker &amp; Report System</p>
+      <div class="logo">
+        <div class="logo-badge">🚨</div>
+        <div class="logo-words">
+          <div><span class="logo-crime">CRIME</span><span class="logo-watch">WATCH</span></div>
+          <div class="logo-sub">◆ NEIGHBORHOOD TRACKER ◆</div>
+        </div>
       </div>
     </div>
     <div class="header-right">
@@ -36,7 +38,7 @@
   </header>
 
   <div class="main-layout">
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <h2>Recent Reports</h2>
         <div class="filter-row">
@@ -158,7 +160,7 @@
       <div class="admin-header">
         <div class="admin-title">
           <span class="admin-logo">⚡</span>
-          <span>ADMIN CONSOLE</span>
+          <span>CRIME WATCH ADMIN</span>
           <span class="admin-cursor">█</span>
           <span class="admin-badge">v1.0 · SECURE</span>
         </div>
@@ -316,8 +318,16 @@
                     </select>
                   </div>
                   <div class="admin-field">
-                    <label>Icon (emoji)</label>
-                    <input type="text" id="ct-icon" placeholder="⚠️" maxlength="4" />
+                    <label>Icon</label>
+                    <div class="emoji-selector">
+                      <div class="emoji-preview" id="emoji-preview-display">⚠️</div>
+                      <input type="hidden" id="ct-icon" value="⚠️" />
+                      <button type="button" class="emoji-toggle-btn" id="emoji-toggle-btn">Choose Emoji ▾</button>
+                      <div class="emoji-picker-panel" id="emoji-picker-panel" style="display:none">
+                        <input type="text" class="emoji-custom-input" id="emoji-custom-input" placeholder="Or type your own emoji…" maxlength="4" />
+                        <div class="emoji-grid" id="emoji-grid"></div>
+                      </div>
+                    </div>
                   </div>
                   <div class="admin-field">
                     <label>Color</label>
@@ -415,6 +425,14 @@
       </div><!-- /admin-body -->
     </div><!-- /admin-panel -->
   </div><!-- /admin-overlay -->
+
+  <nav class="mobile-nav" id="mobile-nav">
+    <button class="mnav-btn" id="mob-map-btn">🗺️<span>Map</span></button>
+    <button class="mnav-btn" id="mob-reports-btn">📋<span>Reports</span></button>
+    <button class="mnav-btn mnav-report" id="mob-report-btn">＋</button>
+    <button class="mnav-btn" id="mob-admin-btn" style="display:none">⚡<span>Admin</span></button>
+    <button class="mnav-btn" id="mob-search-btn">🔍<span>Search</span></button>
+  </nav>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
